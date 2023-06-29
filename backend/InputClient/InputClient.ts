@@ -17,3 +17,24 @@ export class CreateClientInput {
   @Field()
   tel: string;
 }
+
+@InputType()
+export class EditiClientInput {
+  @Field((type) => ID)
+  id: string;
+
+  @Field()
+  name: string;
+
+  @Field()
+  email: string;
+
+  @Field()
+  cpf: string;
+
+  @Field()
+  adress: string;
+
+  @Field()
+  tel: string;
+}

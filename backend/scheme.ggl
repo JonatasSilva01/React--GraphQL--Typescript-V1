@@ -20,10 +20,22 @@ input CreateClientInput {
   tel: String!
 }
 
+input EditiClientInput {
+  adress: String!
+  cpf: String!
+  email: String!
+  id: ID!
+  name: String!
+  tel: String!
+}
+
 type Mutation {
   createClient(createClientObject: CreateClientInput!): Client!
+  deleteOneClient(id: String!): String!
+  editClient(editClientObject: EditiClientInput!): Client!
 }
 
 type Query {
+  clientId(id: String!): Client!
   clients: [Client!]!
 }
