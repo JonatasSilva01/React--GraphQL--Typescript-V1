@@ -3,6 +3,7 @@ import { IoAdd, IoTrashOutline } from "react-icons/io5";
 import { BiPencil } from "react-icons/bi";
 import { useState } from "react";
 import { ModalClient } from "./Components/ModalClient/ModalClient";
+import { useQuery, gql } from "@apollo/client";
 
 interface Client {
   id: string;
@@ -10,7 +11,19 @@ interface Client {
   email: string;
 }
 
+const GET_CLIENTS = gql`
+ query getAllClients{
+    clients {
+      id
+      name
+      email
+    }
+  }
+`;
+
 export default function App() {
+  const {data, loading, error} = useQuery(GET_CLIENTS);
+
   const [modalInfo, setModalInfo] = useState({
     open: false,
     isEdit: false,
