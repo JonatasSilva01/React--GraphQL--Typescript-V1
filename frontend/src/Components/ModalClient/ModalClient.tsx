@@ -1,4 +1,8 @@
+import { useLazyQuery, useMutation, gql } from "@apollo/client";
+
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { GET_CLIENTS } from "../../App";
+import { client } from "../../lib/apollo";
 import { Overlay, Content } from "./ModalClientStyle";
 
 interface Props {
@@ -10,7 +14,72 @@ interface Props {
   closeModal: () => void;
 }
 
+type Client = {
+  id: string;
+  name: string;
+  email: string;
+  cpf: string;
+  adress: string;
+  tel: string;
+};
+
+type ClientWithoutId = Omit<Client, "id">;
+
+const GET_CLIENT = gql`
+  query client($clientId: String!) {
+    client(id: $clientId) {
+      id
+      name
+      email
+      cpf
+      adress
+      tel
+    }
+  }
+`;
+
+const ADD_CLIENT = gql`
+  mutation CreateClient($createClientObject: CreateClientInput!) {
+    createClient(createClientObject: $createClientObject) {
+      id
+      name
+      email
+      cpf
+      adress
+      tel
+    }
+  }
+`;
+
+const EDIT_CLIENT = gql`
+  mutation editClient($editClientObject: EditiClientInput!) {
+  editClient(editClientObject: $editClientObject) {
+    adress
+    cpf
+    email
+    id
+    name
+    tel
+  }
+}
+`;
+
 export function ModalClient({ info, closeModal }: Props) {
+  const [getClient, getClientInfo] = useLazyQuery<
+    { client: Client },
+    { clientId: string }
+  >(GET_CLIENT);
+
+  const [createClient, createClientInfo] = useMutation<
+    { createClient: Client },
+    { createClientObject: ClientWithoutId }
+  >(ADD_CLIENT);
+
+  const [editClient, editClientInfo] = useMutation<
+    { editClient: Client },
+    { editClientObject: Client }
+  >(EDIT_CLIENT);
+
   const [values, setValues] = useState({
     id: "",
     name: "",
@@ -23,7 +92,21 @@ export function ModalClient({ info, closeModal }: Props) {
   useEffect(() => {
     if (!info.isEdit) return;
 
-    //? recuperar os dados do cliente
+    async function getValues() {
+      const currentClient = await getClient({
+        variables: { clientId: info.currentId },
+      });
+
+      setValues({
+        id: currentClient.data?.client.id,
+        name: currentClient.data?.client.name,
+        email: currentClient.data?.client.email,
+        adress: currentClient.data?.client.adress,
+        cpf: currentClient.data?.client.cpf,
+        tel: currentClient.data?.client.tel,
+      } as Client);
+    }
+    getValues();
   }, [info]);
 
   function handleChangeValues(event: ChangeEvent<HTMLInputElement>) {
@@ -40,11 +123,84 @@ export function ModalClient({ info, closeModal }: Props) {
   }
 
   async function handleAddNewClient() {
-    //?
+    await createClient({
+      variables: {
+        createClientObject: {
+          tel: values.tel,
+          name: values.name,
+          adress: values.adress,
+          cpf: values.cpf,
+          email: values.email,
+        },
+      },
+      update: (cache, { data }) => {
+        const clientsReponse = client.readQuery<{ clients: Client[] }>({
+          query: GET_CLIENTS,
+        });
+
+        cache.writeQuery({
+          query: GET_CLIENTS,
+          data: {
+            clients: [
+              ...(clientsReponse?.clients as any),
+              {
+                id: data?.createClient.id,
+                name: data?.createClient.name,
+                email: data?.createClient.email,
+              },
+            ],
+          },
+        });
+      },
+    });
+
+    closeModal();
+    setValues({
+      id: "",
+      name: "",
+      email: "",
+      adress: "",
+      tel: "",
+      cpf: "",
+    });
   }
 
   async function handleEditClient() {
-    //?
+    await editClient({
+      variables: {
+        editClientObject: values,
+      },
+      update: (cache, { data }) => {
+        const clientsReponse = client.readQuery<{ clients: Client[] }>({
+          query: GET_CLIENTS,
+        });
+
+        cache.writeQuery({
+          query: GET_CLIENT,
+          data: {
+            clients: clientsReponse?.clients.map((client) => {
+              if (client.id === data?.editClient.id)
+                return {
+                  id: data?.editClient.id,
+                  name: data?.editClient.name,
+                  email: data?.editClient.email,
+                };
+              return client;
+            }),
+          },
+        });
+      },
+    });
+
+    closeModal();
+    setValues({
+      id: "",
+      name: "",
+      email: "",
+      adress: "",
+      tel: "",
+      cpf: "",
+    });
   }
 
   if (!info.open) return <></>;
